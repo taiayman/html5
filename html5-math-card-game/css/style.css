@@ -1,0 +1,286 @@
+/* General Styles */
+body {
+    font-family: 'Roboto', sans-serif;
+    background-color: #f5f5f5;
+    margin: 0;
+    padding: 0;
+}
+
+#game-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100vh;
+    background-image: linear-gradient(to bottom right, #6c63ff, #03a9f4);
+    color: #ffffff;
+    perspective: 1000px;
+
+}
+
+
+
+.page {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background-color: #ffffff;
+    color: #333333;
+}
+
+.page.hidden {
+    display: none;
+}
+
+
+#start-page {
+    background-color: lightgray; /* Add a temporary background color */
+    background-image: url('../assets/images/game_background.jpg');
+    background-size: cover;
+    background-position: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100vh;
+}
+
+.play-btn {
+    font-family: 'Press Start 2P', cursive;
+    padding: 1rem 1rem;
+    margin: 1rem;
+    cursor: pointer;
+    margin-top: 500px;
+    background-image: url(../assets/images/button.png);
+    width: 200px;
+    height: 80px;
+    background-size: cover;
+    background-position: center;
+    color: #ffffff;
+    border: none;
+    text-align: center;
+    background-color: #ffffff00;
+    border-radius: 0.5rem;
+    font-size: 13px;
+    transition: transform 0.3s;
+}
+
+
+.play-btn:hover {
+    transform: translateY(-4px);
+}
+
+#game-page {
+    background-image: url('../assets/images/game_background.jpg');
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    height: 100vh;
+    margin: 0;
+    position: relative; /* Needed for absolute positioning of child */
+}
+
+.background-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(255, 255, 255, 0.074); /* Semi-transparent white background */
+    backdrop-filter: blur(3px); /* This applies the blur */
+}
+
+
+#timer-score {
+    position: absolute;
+    top: 20px;
+    left: 20px;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+}
+
+/* This will position the music toggle to the top right */
+#music-toggle {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+}
+
+/* Additional styling for timer and score */
+#timer, #score {
+    background-color: #fff;
+    padding: 10px 20px;
+    margin: 5px 0;  /* Adjust margin as needed */
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1); /* Soft shadow for depth */
+}
+
+/* Styling for the music button */
+#toggle-music {
+    background-color: #fff;
+    border: none;
+    padding: 10px;
+    border-radius: 50%;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    cursor: pointer;
+}
+
+#pvp-text {
+    position: absolute;
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 24px;
+    font-weight: bold;
+    text-align: center;
+    background-color: #fff;
+    padding: 10px 20px;
+    border-radius: 10px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    display: none; /* Hide by default */
+}
+
+
+#game-board {
+    transform: perspective(1000px) rotateX(39deg);
+    transform-origin: bottom;
+    transform-style: preserve-3d;
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 25px;
+    padding-top: 130px;
+    margin-bottom: 8rem;
+}
+
+#players-hand {
+    display: flex;
+    justify-content: center;
+    width: 100%;
+    margin-bottom: 2rem;
+    gap: 33px;
+}
+
+.card {
+    display: flex;
+    flex-direction: column;
+    background-color: #ffffff;
+    border: 1px solid #e0e0e0;
+    border-radius: 0.8rem;
+    height: 180px;
+    width: 140px;
+    font-size: 25px;
+    font-weight: bold;
+    cursor: pointer;
+    box-shadow: 5px 5px 15px rgba(0, 0, 0, 0.3);
+    transition: transform 0.3s, box-shadow 0.3s;
+    transform-style: preserve-3d;
+    will-change: transform;
+    padding: 0.5rem;
+  
+    box-shadow: -5px -5px 10px rgba(0, 0, 0, 0.2), 5px 5px 15px rgba(0, 0, 0, 0.3);
+    transform: rotateX(369); /* Adjust this angle as needed */
+    transform-origin: bottom center; 
+
+    justify-content: flex-start; /* aligns content to the top */
+    align-items: flex-start; /* aligns content to the left */
+    padding: 0.5rem;
+
+}
+
+.card.top-row {
+    transform: rotateX(-15deg); /* This value should be larger than the bottom row */
+}
+
+.card.bottom-row {
+    transform: rotateX(-5deg); /* This value should be smaller than the top row */
+}
+
+
+.card .card-value {
+    align-self: flex-start; /* this may not be needed if there's no flexbox applied within the card itself */
+    width: 100%; /* ensures the text container spans the full width of the card */
+    text-align: left;
+}
+
+.card:hover {
+    transform: translateY(-4px) translateZ(10px);
+    box-shadow: 0 8px 12px rgba(0, 0, 0, 0.1), 0 4px 6px rgba(0, 0, 0, 0.08);
+}
+
+.card.dragging {
+    transform: translateZ(20px) rotateX(10deg) rotateY(10deg);
+    box-shadow: 0 16px 24px rgba(0, 0, 0, 0.2), 0 6px 8px rgba(0, 0, 0, 0.1);
+    z-index: 100;
+}
+.card.played {
+    animation: playCard 0.5s forwards;
+}
+
+@keyframes playCard {
+    to {
+        opacity: 0;
+        transform: scale(0.5);
+    }
+}
+
+.card.correct {
+    background-color: #4caf50;
+    color: #ffffff;
+}
+
+.card.incorrect {
+    background-color: #ff6b6b;
+    color: #ffffff;
+}
+
+.page.hidden {
+    display: none;
+}
+
+/* Miscellaneous */
+.hidden {
+    display: none !important;
+}
+
+button:focus {
+    outline: none;
+}
+
+
+
+
+
+.popup {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 999;
+}
+
+.popup-content {
+    background-color: #fff;
+    padding: 20px;
+    border-radius: 5px;
+    text-align: center;
+}
+
+.popup-content button {
+    margin: 10px;
+    padding: 8px 16px;
+    font-size: 16px;
+    cursor: pointer;
+}
