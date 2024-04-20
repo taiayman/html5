@@ -4,9 +4,8 @@ let isPlaying = false;
 let isMusicPlaying = true;
 let player1Score = 0;
 let player2Score = 0;
-const gameTime = 60; // Game duration in seconds
+const gameTime = 60;
 
-// DOM elements
 const timerDisplay = document.getElementById('timer');
 const scoreDisplay = document.getElementById('score');
 const player1ScoreDisplay = document.getElementById('player1-score');
@@ -19,31 +18,84 @@ const playOfflineButton = document.getElementById('play-offline');
 const playOnlineButton = document.getElementById('play-online');
 const toggleMusicButton = document.getElementById('toggle-music');
 
-document.getElementById('play-offline').addEventListener('click', function() {
-    document.getElementById('start-page').classList.add('hidden'); // Hide the start page
-    document.getElementById('game-page').classList.remove('hidden'); // Show the game page
-});
+let draggedCard = null;
+let selectedCard = null;
 
-document.getElementById('play-online').addEventListener('click', function() {
-    document.getElementById('start-page').classList.add('hidden'); // Hide the start page
-    document.getElementById('game-page').classList.remove('hidden'); // Show the game page
-});
+function handleDragStart(event) {
+    if (window.innerWidth > 768) {
+        draggedCard = event.target;
+        event.dataTransfer.setData('text', event.target.textContent);
+    }
+}
 
+function handleTouchStart(event) {
+    draggedCard = event.target;
+    event.dataTransfer = { data: {} };
+    event.dataTransfer.setData('text', event.target.textContent);
+}
 
-// Initial setup
+function handleCardDrop(event, cardValue) {
+    const droppedValue = cardValue || parseInt(event.dataTransfer.getData('text'), 10);
+    const targetValue = parseInt(event.target.textContent, 10);
+    const increment = getUserConfiguration();
+
+    if (droppedValue === targetValue + increment) {
+        const scoreToAdd = 10;
+        updateScore(score + scoreToAdd);
+
+        if (score % 40 === 0) {
+            setupGameBoard(increment);
+        }
+
+        event.target.textContent = droppedValue;
+        event.target.classList.remove('incorrect');
+        event.target.classList.add('correct');
+
+        if (draggedCard) {
+            draggedCard.classList.add('played');
+            draggedCard.addEventListener('animationend', () => {
+                draggedCard.remove();
+                draggedCard = null;
+            });
+        }
+    } else {
+        event.target.classList.add('incorrect');
+    }
+}
+
+function handleDragOver(event) {
+    event.preventDefault();
+}
+
+function handleDrop(event) {
+    event.preventDefault();
+    handleCardDrop(event);
+}
+
+function setupCardEvents() {
+    const cards = document.querySelectorAll('.card');
+    cards.forEach(card => {
+        card.addEventListener('dragstart', handleDragStart);
+        card.addEventListener('dragover', handleDragOver);
+        card.addEventListener('drop', handleDrop);
+        card.addEventListener('touchstart', handleTouchStart);
+    });
+}
+
 function initializeGame() {
-    // Show the start page by default
     startPage.classList.remove('hidden');
     gamePage.classList.add('hidden');
 
-    // Setup buttons to start the game
     playOfflineButton.addEventListener('click', startOfflineGame);
     playOnlineButton.addEventListener('click', startOnlineGame);
-
-    // Setup the music toggle button
     toggleMusicButton.addEventListener('click', toggleMusic);
-}
 
+    setupCardEvents();
+
+    if (window.innerWidth <= 768) {
+        setupMobileEvents();
+    }
+}
 
 function startOfflineGame() {
     const increment = getUserConfiguration();
@@ -59,28 +111,22 @@ function startOfflineGame() {
     updatePlayerScores();
     startTimer(gameTime);
 
-    setupGameBoard(increment);  // Pass the increment value
+    setupGameBoard(increment);
     gamePage.classList.remove('hidden');
     document.getElementById('player-info').classList.add('hidden');
 }
 
-
-// Function to start the online game
 function startOnlineGame() {
-    // Implement online game logic here
     alert('Online game mode is not yet implemented.');
     document.getElementById('player-info').classList.remove('hidden');
-
 }
 
-// Function to start the timer
 function startTimer(duration) {
-    let startTime = Date.now();
+    const startTime = Date.now();
 
-    // Update the timer every second
-    gameTimer = setInterval(function () {
-        let elapsedTime = Date.now() - startTime;
-        let timeLeft = duration - Math.floor(elapsedTime / 1000);
+    gameTimer = setInterval(() => {
+        const elapsedTime = Date.now() - startTime;
+        const timeLeft = duration - Math.floor(elapsedTime / 1000);
         if (timeLeft >= 0) {
             timerDisplay.textContent = formatTime(timeLeft);
         } else {
@@ -89,237 +135,285 @@ function startTimer(duration) {
     }, 1000);
 }
 
-// Function to end the game
-// Function to end the game
 function endGame() {
     isPlaying = false;
     clearInterval(gameTimer);
 
-    // Determine the winner
-    let winner = (player1Score > player2Score) ? 'Player 1' : 'Player 2';
-    if (player1Score === player2Score) {
-        winner = 'It\'s a tie!';
-    }
+    document.querySelectorAll('.popup').forEach(popup => popup.remove());
 
-    // Create the popup element
+    let winner = 'It\'s a tie!';
+    if (player1Score > player2Score) winner = 'Player 1 wins!';
+    else if (player2Score > player1Score) winner = 'Player 2 wins!';
+
     const popup = document.createElement('div');
     popup.classList.add('popup');
     popup.innerHTML = `
         <div class="popup-content">
             <h2>Time's up!</h2>
             <p>Your final score is: ${score}</p>
-            <p>${winner} wins!</p>
+            <p>${winner}</p>
             <button id="play-again-btn">Play Again</button>
             <button id="back-to-home-btn">Back to Home</button>
         </div>
     `;
 
-    // Add the popup to the document body
     document.body.appendChild(popup);
 
-    // Add event listeners to the buttons
-    const playAgainBtn = document.getElementById('play-again-btn');
-    const backToHomeBtn = document.getElementById('back-to-home-btn');
-
-    playAgainBtn.addEventListener('click', () => {
+    document.getElementById('play-again-btn').addEventListener('click', () => {
         resetGameState();
         popup.remove();
         startOfflineGame();
     });
 
-    backToHomeBtn.addEventListener('click', () => {
+    document.getElementById('back-to-home-btn').addEventListener('click', () => {
         resetGameState();
         popup.remove();
         startPage.classList.remove('hidden');
+        gamePage.classList.add('hidden');
     });
 }
 
-// Reset game state for a new game
 function resetGameState() {
-    startPage.classList.remove('hidden');
-    gamePage.classList.add('hidden');
     timerDisplay.textContent = '01:00';
     updateScore(0);
     player1Score = 0;
     player2Score = 0;
     updatePlayerScores();
 
-    // Clear the game board and reload the game
     gameBoard.innerHTML = '';
     playersHand.innerHTML = '';
-    setupGameBoard();  // Reload the game board and players hand to start fresh
+}
+
+function handleTouchMove(event) {
+    const touch = event.targetTouches[0];
+    const card = document.querySelector('.dragging');
+    card.style.left = `${touch.pageX - card.offsetWidth / 2}px`;
+    card.style.top = `${touch.pageY - card.offsetHeight / 2}px`;
+    event.preventDefault();
+}
+
+function handleTouchEnd(event) {
+    const card = document.querySelector('.dragging');
+    if (card) {
+        card.style.left = 'initial';
+        card.style.top = 'initial';
+        card.classList.remove('dragging');
+
+        const target = document.elementFromPoint(event.changedTouches[0].clientX, event.changedTouches[0].clientY);
+        if (target && target.classList.contains('drop-zone')) {
+            handleCardDrop(target, parseInt(card.textContent));
+        }
+    }
+}
+
+function setupTouchEvents() {
+    document.querySelectorAll('.card').forEach(card => {
+        card.addEventListener('touchstart', handleTouchStart);
+        card.addEventListener('touchmove', handleTouchMove);
+        card.addEventListener('touchend', handleTouchEnd);
+    });
 }
 
 function loadPlayersCards(boardCardValues, increment) {
-    playersHand.innerHTML = ''; // Clear the existing content of the players-hand div
+    playersHand.innerHTML = '';
 
-    // Shuffle the board card values to randomize which ones will have corresponding player cards
     shuffleArray(boardCardValues);
 
-    // Select only the first 6 unique values from the shuffled board card values for the player's hand
-    let selectedValues = new Set(boardCardValues.slice(0, 6));
+    const selectedValues = new Set(boardCardValues.slice(0, 5));
 
-    // Ensure that there are exactly 6 unique values
-    while (selectedValues.size < 6) {
-        let randomValue = getRandomNumber(1, 50 - increment);
+    while (selectedValues.size < 5) {
+        const randomValue = getRandomNumber(1, 50 - increment);
         if (!selectedValues.has(randomValue)) {
             selectedValues.add(randomValue);
         }
     }
 
-    // Create and append card elements for the selected values
     selectedValues.forEach(value => {
-        let correctValue = value + increment; // Calculate the correct card value
-        let card = createCardElement(correctValue, true); // Mark as player card
+        const correctValue = value + increment;
+        const card = createCardElement(correctValue, true);
         playersHand.appendChild(card);
     });
 }
 
 function getUserConfiguration() {
     const increment = parseInt(prompt("Enter the increment value (2, 4, ..., 50):"));
-    if (isNaN(increment) || increment < 2 || increment > 50 || increment % 2 !== 0) {
+    if (isNaN(increment) || increment < 2 || increment > 50|| increment % 2 !== 0) {
         alert("Invalid increment value. Using the default value of 2.");
         return 2;
     }
     return increment;
-}
-
-function setupGameBoard(increment) {
+ }
+ 
+ function setupGameBoard(increment) {
     gameBoard.innerHTML = '';
-    let boardCardValues = [];
+    const boardCardValues = [];
     for (let i = 0; i < 4; i++) {
-        boardCardValues.push(getRandomNumber(1, 50 - increment));  // Ensuring room for increment
+        boardCardValues.push(getRandomNumber(1, 50 - increment));
     }
-
+ 
     shuffleArray(boardCardValues);
-
+ 
     boardCardValues.forEach(value => {
-        let card = createCardElement(value);  // These are board cards, not draggable
+        const card = createCardElement(value);
         gameBoard.appendChild(card);
     });
-
-    // Load 6 player cards matching a subset of the board cards
+ 
     loadPlayersCards(boardCardValues, increment);
-
-    // Add drop events to the board cards after they are added to the DOM
     addDropEventsToBoardCards(increment);
-}
-
-// Update the score display
-function updateScore(newScore) {
+ }
+ 
+ function updateScore(newScore) {
     score = newScore;
-    scoreDisplay.textContent = 'Score: ' + score;
-}
-
-// Update the player scores display
-function updatePlayerScores() {
+    scoreDisplay.textContent = `Score: ${score}`;
+ }
+ 
+ function updatePlayerScores() {
     player1ScoreDisplay.textContent = player1Score;
     player2ScoreDisplay.textContent = player2Score;
-}
-
-// Toggle the music
-function toggleMusic() {
-    if (isMusicPlaying) {
-        // Stop the music
-        isMusicPlaying = false;
-        toggleMusicButton.textContent = '🔇';
-    } else {
-        // Play the music
-        isMusicPlaying = true;
-        toggleMusicButton.textContent = '🔊';
-    }
-}
-
-// Utility functions
-function getRandomNumber(min, max) {
+ }
+ 
+ function toggleMusic() {
+    isMusicPlaying = !isMusicPlaying;
+    toggleMusicButton.textContent = isMusicPlaying ? '🔊' : '🔇';
+ }
+ 
+ function getRandomNumber(min, max) {
     return Math.floor(Math.random() * (max - min + 1)) + min;
-}
-
-function shuffleArray(array) {
+ }
+ 
+ function shuffleArray(array) {
     for (let i = array.length - 1; i > 0; i--) {
-        let j = Math.floor(Math.random() * (i + 1));
+        const j = Math.floor(Math.random() * (i + 1));
         [array[i], array[j]] = [array[j], array[i]];
     }
     return array;
-}
-
-function createCardElement(value, isPlayerCard = false) {
-    let card = document.createElement('div');
+ }
+ 
+ function createCardElement(value, isPlayerCard = false) {
+    const card = document.createElement('div');
     card.classList.add('card');
     card.textContent = value;
-
+ 
     if (isPlayerCard) {
-        // Only player cards are draggable and have dragstart event
         card.draggable = true;
         card.addEventListener('dragstart', handleDragStart);
     }
-
+ 
     return card;
-}
-
-
-
-function addDropEventsToBoardCards(increment) {
+ }
+ 
+ function addDropEventsToBoardCards(increment) {
     Array.from(gameBoard.children).forEach(card => {
-        card.addEventListener('drop', (event) => handleCardDrop(event, increment));
+        card.addEventListener('drop', event => handleCardDrop(event, increment));
         card.addEventListener('dragover', handleDragOver);
     });
-}
-
-function handleCardDrop(event, increment) {
+ }
+ 
+ function handleCardDrop(event, increment) {
     event.preventDefault();
-    event.stopPropagation(); 
-  
-    let droppedValue = parseInt(event.dataTransfer.getData('text'), 10);
-    let targetValue = parseInt(event.target.textContent, 10);
-  
+    event.stopPropagation();
+ 
+    const droppedValue = parseInt(event.dataTransfer.getData('text'), 10);
+    const targetValue = parseInt(event.target.textContent, 10);
+ 
     if (droppedValue === targetValue + increment) {
-      let scoreToAdd = 10; 
-  
-      updateScore(score + scoreToAdd); 
-  
-      if (score % 40 === 0) {  
-        setupGameBoard(increment); // Reload for the next "level"
-        // Determine which player earned the points and update their score
-        if (event.target.parentNode === gameBoard) {
-          player1Score += scoreToAdd;
-        } else if (event.target.parentNode === playersHand) {
-          player2Score += scoreToAdd;
+        const scoreToAdd = 10;
+ 
+        updateScore(score + scoreToAdd);
+ 
+        if (score % 40 === 0) {
+            setupGameBoard(increment);
+            if (event.target.parentNode === gameBoard) {
+                player1Score += scoreToAdd;
+            } else if (event.target.parentNode === playersHand) {
+                player2Score += scoreToAdd;
+            }
+            updatePlayerScores();
         }
-        updatePlayerScores(); // Update the player score display
-      }
-  
-      event.target.textContent = droppedValue; 
-      event.target.classList.remove('incorrect');
-      event.target.classList.add('correct');
-  
-      let playedCard = document.querySelector('.card.dragging');
-      playedCard.classList.add('played');
-  
-      playedCard.addEventListener('animationend', () => {
-        playedCard.remove(); 
-      });
+ 
+        event.target.textContent = droppedValue;
+        event.target.classList.remove('incorrect');
+        event.target.classList.add('correct');
+ 
+        const playedCard = document.querySelector('.card.dragging');
+        playedCard.classList.add('played');
+ 
+        playedCard.addEventListener('animationend', () => {
+            playedCard.remove();
+        });
     } else {
-      event.target.classList.add('incorrect');
+        event.target.classList.add('incorrect');
     }
-  }
-
-function handleDragStart(event) {
-    // Add 'dragging' class to the card being dragged
-    event.target.classList.add('dragging');
-    event.dataTransfer.setData('text', event.target.textContent);
-}
-
-
-function handleDragOver(event) {
+ }
+ 
+ function handleDragStart(event) {
+    if (window.innerWidth > 768) {
+        event.target.classList.add('dragging');
+        event.dataTransfer.setData('text', event.target.textContent);
+    }
+ }
+ 
+ function handleDragOver(event) {
     event.preventDefault();
-}
-
-function formatTime(seconds) {
-    let minutes = Math.floor(seconds / 60);
-    let remainingSeconds = seconds % 60;
-    return minutes.toString().padStart(2, '0') + ':' + remainingSeconds.toString().padStart(2, '0');
-}
-
-// Call the initialize function when the window is loaded
-window.addEventListener('load', initializeGame);
+ }
+ 
+ function formatTime(seconds) {
+    const minutes = Math.floor(seconds / 60);
+    const remainingSeconds = seconds % 60;
+    return `${minutes.toString().padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`;
+ }
+ 
+ function setupMobileEvents() {
+    const cards = document.querySelectorAll('#players-hand .card');
+    cards.forEach(card => {
+        card.addEventListener('click', function(event) {
+            handleCardSelection(event.target);
+        });
+    });
+ 
+    const gameSlots = document.querySelectorAll('#game-board .slot');
+    gameSlots.forEach(slot => {
+        slot.addEventListener('click', function(event) {
+            if (selectedCard) {
+                handleCardPlacement(event.target);
+            }
+        });
+    });
+ }
+ 
+ function handleCardSelection(card) {
+    if (selectedCard) {
+        selectedCard.classList.remove('selected');
+    }
+ 
+    selectedCard = card;
+    selectedCard.classList.add('selected');
+ }
+ 
+ function handleCardPlacement(target) {
+    const increment = getUserConfiguration();
+    const targetValue = parseInt(target.textContent, 10);
+    const cardValue = parseInt(selectedCard.textContent, 10);
+ 
+    if (cardValue === targetValue + increment) {
+        updateScore(score + 10);
+        target.textContent = cardValue;
+        selectedCard.remove();
+        resetSelectedCard();
+    } else {
+        console.log('Incorrect placement');
+    }
+ }
+ 
+ function resetSelectedCard() {
+    if (selectedCard) {
+        selectedCard.classList.remove('selected');
+        selectedCard = null;
+    }
+ }
+ 
+ function getUserConfiguration() {
+    return 2; // Default increment if none is set
+ }
+ 
+ window.addEventListener('DOMContentLoaded', initializeGame);
