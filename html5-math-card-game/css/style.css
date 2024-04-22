@@ -171,7 +171,6 @@ body {
     overflow: visible; /* Show overlapped parts of cards */
 }
 
-
 .card {
     display: flex;
     flex-direction: column;
@@ -182,32 +181,67 @@ body {
     width: 120px;
     font-size: 25px;
     font-weight: bold;
-    user-select: none; 
     cursor: pointer;
     box-shadow: 5px 5px 15px rgba(0, 0, 0, 0.3);
-    transition: transform 0.3s, box-shadow 0.3s;
-    transform-style: preserve-3d;
-    will-change: transform;
     padding: 0.5rem;
-  
-    box-shadow: -5px -5px 10px rgba(0, 0, 0, 0.2), 5px 5px 15px rgba(0, 0, 0, 0.3);
-    transform: rotateX(369); /* Adjust this angle as needed */
-    transform-origin: bottom center; 
-
-    justify-content: flex-start; /* aligns content to the top */
-    align-items: flex-start; /* aligns content to the left */
-    padding: 0.5rem;
-
     position: relative;
-    margin-left: 0;
-    left: auto;
-    transform: none;
-
+    overflow: hidden;
+    transition: box-shadow 0.3s;
 }
 
-.card.selected {
-    transform: translateY(-10px); /* Move the card up to indicate selection */
-    transition: transform 0.2s; /* Smooth transition for the movement */
+/* Apply the fade-in animation to the player's hand cards only */
+#players-hand .card {
+    animation: fadeInCards 0.5s ease-out forwards;
+    animation-delay: var(--animation-delay, 0s); /* Use a custom property for delay */
+}
+
+
+
+@keyframes fadeInCards {
+    from {
+        opacity: 0; /* Start fully transparent */
+    }
+    to {
+        opacity: 1; /* Fade to fully opaque */
+    }
+}
+
+
+/* Staggering the animation with specific delays and transformations */
+#players-hand .card:nth-child(1) {
+    animation-delay: 0.1s;
+    transform: rotate(-20deg) translateX(-100px);
+}
+#players-hand .card:nth-child(2) {
+    animation-delay: 0.2s;
+    transform: rotate(-10deg) translateX(-50px);
+}
+#players-hand .card:nth-child(3) {
+    animation-delay: 0.3s;
+    transform: rotate(0deg) translateX(0);
+}
+#players-hand .card:nth-child(4) {
+    animation-delay: 0.4s;
+    transform: rotate(10deg) translateX(50px);
+}
+#players-hand .card:nth-child(5) {
+    animation-delay: 0.5s;
+    transform: rotate(20deg) translateX(100px);
+}
+
+
+.card .card-value {
+    position: absolute;
+    top: 5px; /* Adjust as needed */
+    left: 8px; /* Adjust as needed */
+    /* Add styles for the card value text */
+}
+.correct-message {
+    position: absolute;
+    top: 45%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    /* Add other styling for the correct message text as desired */
 }
 
 
@@ -226,10 +260,6 @@ body {
     text-align: left;
 }
 
-.card:hover {
-    transform: translateY(-4px) translateZ(10px);
-    box-shadow: 0 8px 12px rgba(0, 0, 0, 0.1), 0 4px 6px rgba(0, 0, 0, 0.08);
-}
 
 .card.dragging {
     transform: translateZ(20px) rotateX(10deg) rotateY(10deg);
@@ -240,6 +270,11 @@ body {
     animation: playCard 0.5s forwards;
 }
 
+.card:hover, .card.selected {
+    transform: translateY(-10px) scale(1.1); /* Enhance interactivity with visual cues */
+    box-shadow: 0 15px 25px rgba(0, 0, 0, 0.25);
+}
+
 @keyframes playCard {
     to {
         opacity: 0;
@@ -248,14 +283,15 @@ body {
 }
 
 .card.correct {
-    background-color: #4caf50;
-    color: #ffffff;
+    background-color: green; /* Green background for correct answers */
+    color: white; /* White text for better visibility */
 }
 
 .card.incorrect {
-    background-color: #ff6b6b;
-    color: #ffffff;
+    background-color: red; /* Red background for incorrect answers */
+    color: white; /* White text for better visibility */
 }
+
 
 .page.hidden {
     display: none;
@@ -271,7 +307,23 @@ button:focus {
 }
 
 
+@keyframes pulse {
+    0%, 100% {
+        box-shadow: 0 0 0 0 rgba(128, 0, 128, 0.7);
+    }
+    50% {
+        box-shadow: 0 0 0 10px rgba(128, 0, 128, 0);
+    }
+}
+
+
 @media (max-width: 768px) {
+
+    .card.selected {
+        animation: pulse 1.5s infinite;
+        border: 3px solid purple; /* Add a purple border for a static indication */
+    }
+    
 
     #game-board {
         transform: perspective(1000px) rotateX(39deg);
@@ -292,10 +344,11 @@ button:focus {
         height: 180px;
         width: 118px;
         font-size: 25px;
+        touch-action: none;
         font-weight: bold;
         cursor: pointer;
         box-shadow: 5px 5px 15px rgba(0, 0, 0, 0.3);
-        transition: transform 0.3s, box-shadow 0.3s;
+        transition: transform 0.3s, box-shadow 5s;
         touch-action: manipulation; 
         transform-style: preserve-3d;
         will-change: transform;
@@ -308,7 +361,59 @@ button:focus {
         justify-content: flex-start; /* aligns content to the top */
         align-items: flex-start; /* aligns content to the left */
         padding: 0.5rem;
+
+        
+        transition: transform 0.3s ease; /* Smooth transition for moving card */
+        cursor: pointer; /* Indicates the card can be interacted with */
     
+    
+    
+    }
+
+    .card.correct {
+        background-color: green; /* Green background for correct answers */
+        color: white; /* White text for better visibility */
+        position: relative; /* Position relative to place the central span correctly */
+    }
+    
+    .card.incorrect {
+        background-color: red; /* Red background for incorrect answers */
+        color: white; /* White text for visibility */
+        position: relative; /* Position relative to place the central span correctly */
+    }
+    
+    .card .status-message {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        font-size: 16px; /* Adjust based on your design */
+        color: white;
+        font-weight: bold;
+    }
+    .status-message {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        color: white;
+        font-weight: bold;
+        font-size: 1em; /* Adjust based on your card size */
+    }
+    
+
+    .card .card-value {
+        position: absolute;
+        top: 5px; /* Adjust as needed */
+        left: 8px; /* Adjust as needed */
+        /* Add styles for the card value text */
+    }
+    .correct-message {
+        position: absolute;
+        top: 45%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        /* Add other styling for the correct message text as desired */
     }
 
     #players-hand {
@@ -349,8 +454,10 @@ button:focus {
     #players-hand .card:nth-child(6) { transform: translateX(150%) rotate(33deg); z-index: 1; }
     /* ...and so on for more cards */
     
+
+
 }
-  
+
 
 
 .popup {
