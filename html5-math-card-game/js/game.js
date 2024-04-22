@@ -4,8 +4,12 @@ let isPlaying = false;
 let isMusicPlaying = true;
 let player1Score = 0;
 let player2Score = 0;
-const gameTime = 60;
+let selectedCard = null;
+let incrementValue = 0; // Default to 0 or any suitable default
+const gameTime = 60; // Game duration in seconds
+const INCREMENT_VALUE = 2; 
 
+// DOM elements
 const timerDisplay = document.getElementById('timer');
 const scoreDisplay = document.getElementById('score');
 const player1ScoreDisplay = document.getElementById('player1-score');
@@ -18,115 +22,99 @@ const playOfflineButton = document.getElementById('play-offline');
 const playOnlineButton = document.getElementById('play-online');
 const toggleMusicButton = document.getElementById('toggle-music');
 
-let draggedCard = null;
-let selectedCard = null;
+document.getElementById('play-offline').addEventListener('click', function() {
+    document.getElementById('start-page').classList.add('hidden'); // Hide the start page
+    document.getElementById('game-page').classList.remove('hidden'); // Show the game page
+});
 
-function handleDragStart(event) {
-    if (window.innerWidth > 768) {
-        draggedCard = event.target;
-        event.dataTransfer.setData('text', event.target.textContent);
-    }
-}
+document.getElementById('play-online').addEventListener('click', function() {
+    document.getElementById('start-page').classList.add('hidden'); // Hide the start page
+    document.getElementById('game-page').classList.remove('hidden'); // Show the game page
+});
 
-function handleTouchStart(event) {
-    draggedCard = event.target;
-    event.dataTransfer = { data: {} };
-    event.dataTransfer.setData('text', event.target.textContent);
-}
+document.addEventListener('DOMContentLoaded', function() {
+    const isSmallScreen = window.matchMedia("(max-width: 768px)").matches;
 
-function handleCardDrop(event, cardValue) {
-    const droppedValue = cardValue || parseInt(event.dataTransfer.getData('text'), 10);
-    const targetValue = parseInt(event.target.textContent, 10);
-    const increment = getUserConfiguration();
-
-    if (droppedValue === targetValue + increment) {
-        const scoreToAdd = 10;
-        updateScore(score + scoreToAdd);
-
-        if (score % 40 === 0) {
-            setupGameBoard(increment);
-        }
-
-        event.target.textContent = droppedValue;
-        event.target.classList.remove('incorrect');
-        event.target.classList.add('correct');
-
-        if (draggedCard) {
-            draggedCard.classList.add('played');
-            draggedCard.addEventListener('animationend', () => {
-                draggedCard.remove();
-                draggedCard = null;
-            });
-        }
+    if (isSmallScreen) {
+        setupTapEvents(); // Setup tap events for small screens
     } else {
-        event.target.classList.add('incorrect');
+        setupDragAndDropEvents(); // Setup drag and drop for larger screens
     }
-}
+});
 
-function handleDragOver(event) {
-    event.preventDefault();
-}
-
-function handleDrop(event) {
-    event.preventDefault();
-    handleCardDrop(event);
-}
-
-function setupCardEvents() {
-    const cards = document.querySelectorAll('.card');
-    cards.forEach(card => {
-        card.addEventListener('dragstart', handleDragStart);
-        card.addEventListener('dragover', handleDragOver);
-        card.addEventListener('drop', handleDrop);
-        card.addEventListener('touchstart', handleTouchStart);
-    });
-}
 
 function initializeGame() {
+    // Hide game elements initially
     startPage.classList.remove('hidden');
     gamePage.classList.add('hidden');
 
+    // No need to get increment value here since we're using a constant
+    incrementValue = INCREMENT_VALUE;  // Use the constant increment value directly
+
+    // Set up the game based on screen size
+    const isSmallScreen = window.matchMedia("(max-width: 768px)").matches;
+    if (isSmallScreen) {
+        setupTapEvents(); // Set up tap events for smaller screens
+    } else {
+        setupDragAndDropEvents(); // Set up drag and drop for larger screens
+    }
+
+    // Set up UI elements or other initial states as needed
+    setupUI();
+}
+
+function setupUI() {
     playOfflineButton.addEventListener('click', startOfflineGame);
     playOnlineButton.addEventListener('click', startOnlineGame);
     toggleMusicButton.addEventListener('click', toggleMusic);
-
-    setupCardEvents();
-
-    if (window.innerWidth <= 768) {
-        setupMobileEvents();
-    }
 }
 
-function startOfflineGame() {
-    const increment = getUserConfiguration();
 
+function startOfflineGame() {
+    // Hide the start page and show the game page
     startPage.classList.add('hidden');
     gamePage.classList.remove('hidden');
 
+    // Set game state as playing
     isPlaying = true;
+    
+    // Reset and update scores
     score = 0;
-    updateScore(0);
     player1Score = 0;
     player2Score = 0;
-    updatePlayerScores();
+    updateScore(0);  // Reset the score display to 0
+    updatePlayerScores();  // Update player scores displays
+
+    // Start the game timer
     startTimer(gameTime);
 
-    setupGameBoard(increment);
+    // Setup the game board using the constant increment value
+    setupGameBoard(INCREMENT_VALUE);
+
+    // Ensure game-related UI is correctly displayed
     gamePage.classList.remove('hidden');
     document.getElementById('player-info').classList.add('hidden');
 }
 
+
+
+
+// Function to start the online game
 function startOnlineGame() {
+    // Implement online game logic here
     alert('Online game mode is not yet implemented.');
     document.getElementById('player-info').classList.remove('hidden');
+
 }
 
+// Function to start the timer
 function startTimer(duration) {
-    const startTime = Date.now();
+    let startTime = Date.now();
 
-    gameTimer = setInterval(() => {
-        const elapsedTime = Date.now() - startTime;
-        const timeLeft = duration - Math.floor(elapsedTime / 1000);
+    // Update the timer every second
+    gameTimer = setInterval(function () {
+        let elapsedTime = Date.now() - startTime;
+        let timeLeft = duration - Math.floor(elapsedTime / 1000);
         if (timeLeft >= 0) {
             timerDisplay.textContent = formatTime(timeLeft);
         } else {
@@ -135,16 +123,20 @@ function startTimer(duration) {
     }, 1000);
 }
 
+// Function to end the game
 function endGame() {
     isPlaying = false;
     clearInterval(gameTimer);
 
-    document.querySelectorAll('.popup').forEach(popup => popup.remove());
+    // Reset UI components
+    document.querySelectorAll('.popup').forEach(popup => popup.remove()); // Remove any existing popups
 
+    // Determine the winner
     let winner = 'It\'s a tie!';
     if (player1Score > player2Score) winner = 'Player 1 wins!';
     else if (player2Score > player1Score) winner = 'Player 2 wins!';
 
+    // Create the popup element
     const popup = document.createElement('div');
     popup.classList.add('popup');
     popup.innerHTML = `
@@ -159,13 +151,14 @@ function endGame() {
 
     document.body.appendChild(popup);
 
-    document.getElementById('play-again-btn').addEventListener('click', () => {
+    // Add event listeners to the buttons
+    document.getElementById('play-again-btn').addEventListener('click', function() {
         resetGameState();
         popup.remove();
         startOfflineGame();
     });
 
-    document.getElementById('back-to-home-btn').addEventListener('click', () => {
+    document.getElementById('back-to-home-btn').addEventListener('click', function() {
         resetGameState();
         popup.remove();
         startPage.classList.remove('hidden');
@@ -180,240 +173,463 @@ function resetGameState() {
     player2Score = 0;
     updatePlayerScores();
 
+    // Clear the game board and players hand to start fresh
     gameBoard.innerHTML = '';
     playersHand.innerHTML = '';
 }
 
-function handleTouchMove(event) {
-    const touch = event.targetTouches[0];
-    const card = document.querySelector('.dragging');
-    card.style.left = `${touch.pageX - card.offsetWidth / 2}px`;
-    card.style.top = `${touch.pageY - card.offsetHeight / 2}px`;
-    event.preventDefault();
+function isTouchDevice() {
+    return 'ontouchstart' in window || navigator.maxTouchPoints > 0 || navigator.msMaxTouchPoints > 0;
+}
+function isLargeScreen() {
+    return window.matchMedia("(min-width: 769px)").matches;
 }
 
-function handleTouchEnd(event) {
-    const card = document.querySelector('.dragging');
-    if (card) {
-        card.style.left = 'initial';
-        card.style.top = 'initial';
-        card.classList.remove('dragging');
-
-        const target = document.elementFromPoint(event.changedTouches[0].clientX, event.changedTouches[0].clientY);
-        if (target && target.classList.contains('drop-zone')) {
-            handleCardDrop(target, parseInt(card.textContent));
-        }
-    }
-}
-
-function setupTouchEvents() {
-    document.querySelectorAll('.card').forEach(card => {
-        card.addEventListener('touchstart', handleTouchStart);
-        card.addEventListener('touchmove', handleTouchMove);
-        card.addEventListener('touchend', handleTouchEnd);
-    });
-}
 
 function loadPlayersCards(boardCardValues, increment) {
-    playersHand.innerHTML = '';
+    playersHand.innerHTML = '';  // Clear the existing content of the players-hand div
 
-    shuffleArray(boardCardValues);
+    // Select 4 cards from the board to have matching cards in the player's hand
+    let matchingCards = boardCardValues.slice(0, 4);
 
-    const selectedValues = new Set(boardCardValues.slice(0, 5));
-
-    while (selectedValues.size < 5) {
-        const randomValue = getRandomNumber(1, 50 - increment);
-        if (!selectedValues.has(randomValue)) {
-            selectedValues.add(randomValue);
-        }
-    }
-
-    selectedValues.forEach(value => {
-        const correctValue = value + increment;
-        const card = createCardElement(correctValue, true);
+    // Create the player's hand cards that are correct
+    matchingCards.forEach(value => {
+        let correctValue = value + increment;  // Calculate the correct card value
+        let card = createCardElement(correctValue, true);  // Create a player card
         playersHand.appendChild(card);
     });
+
+    // Add one incorrect card to ensure it is not a correct match
+    let incorrectValue;
+    do {
+        incorrectValue = getRandomNumber(1, 50);  // Generate a random value for the incorrect card
+    } while (matchingCards.includes(incorrectValue - increment));  // Ensure it does not accidentally match
+
+    // Add the incorrect card to the hand
+    playersHand.appendChild(createCardElement(incorrectValue, true));
+
+    // Shuffle the player's hand to randomize the cards' positions
+    shufflePlayersHand();  // Use a specific function to shuffle hand cards
 }
 
 function getUserConfiguration() {
-    const increment = parseInt(prompt("Enter the increment value (2, 4, ..., 50):"));
-    if (isNaN(increment) || increment < 2 || increment > 50|| increment % 2 !== 0) {
+    const userIncrement = prompt("Enter the increment value (2, 4, ..., 50):");
+    const increment = parseInt(userIncrement, 10);
+    if (isNaN(increment) || increment < 2 || increment > 50 || increment % 2 !== 0) {
         alert("Invalid increment value. Using the default value of 2.");
         return 2;
     }
     return increment;
- }
- 
- function setupGameBoard(increment) {
+}
+
+
+function setupGameBoard(increment) {
+    // Clear the game board to prepare for new game setup
     gameBoard.innerHTML = '';
-    const boardCardValues = [];
+    let boardCardValues = [];
+
+    // Generate board card values ensuring they allow space for the increment
     for (let i = 0; i < 4; i++) {
         boardCardValues.push(getRandomNumber(1, 50 - increment));
     }
- 
+
+    // Shuffle the values to randomize the game board
     shuffleArray(boardCardValues);
- 
+
+    // Create and append board cards to the game board
     boardCardValues.forEach(value => {
-        const card = createCardElement(value);
+        let card = createCardElement(value, false);  // Cards are not draggable by default
         gameBoard.appendChild(card);
+        
+        // Attach drag event listeners only on large screens
+        if (isLargeScreen()) {
+            card.addEventListener('dragover', handleDragOver);
+            card.addEventListener('drop', (event) => handleCardDrop(event, increment));
+        }
     });
- 
+
+    // Load player cards that could potentially match the board cards
     loadPlayersCards(boardCardValues, increment);
-    addDropEventsToBoardCards(increment);
- }
- 
- function updateScore(newScore) {
+}
+
+
+// Update the score display
+function updateScore(newScore) {
     score = newScore;
-    scoreDisplay.textContent = `Score: ${score}`;
- }
- 
- function updatePlayerScores() {
+    scoreDisplay.textContent = 'Score: ' + score;
+}
+
+// Update the player scores display
+function updatePlayerScores() {
     player1ScoreDisplay.textContent = player1Score;
     player2ScoreDisplay.textContent = player2Score;
- }
- 
- function toggleMusic() {
-    isMusicPlaying = !isMusicPlaying;
-    toggleMusicButton.textContent = isMusicPlaying ? '🔊' : '🔇';
- }
- 
- function getRandomNumber(min, max) {
+}
+
+// Toggle the music
+function toggleMusic() {
+    if (isMusicPlaying) {
+        // Stop the music
+        isMusicPlaying = false;
+        toggleMusicButton.textContent = '🔇';
+    } else {
+        // Play the music
+        isMusicPlaying = true;
+        toggleMusicButton.textContent = '🔊';
+    }
+}
+
+// Utility functions
+function getRandomNumber(min, max) {
     return Math.floor(Math.random() * (max - min + 1)) + min;
- }
- 
- function shuffleArray(array) {
+}
+
+function shuffleArray(array) {
     for (let i = array.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
+        let j = Math.floor(Math.random() * (i + 1));
         [array[i], array[j]] = [array[j], array[i]];
     }
-    return array;
- }
- 
- function createCardElement(value, isPlayerCard = false) {
-    const card = document.createElement('div');
+}
+
+function createCardElement(value, isPlayerCard) {
+    let card = document.createElement('div');
     card.classList.add('card');
-    card.textContent = value;
- 
+    
+    // Create a span for the card value
+    let valueSpan = document.createElement('span');
+    valueSpan.classList.add('card-value');
+    valueSpan.textContent = value;
+    card.appendChild(valueSpan); // Add the value span to the card
+
     if (isPlayerCard) {
+        // If this card is a player's card, make it draggable and add event listeners for dragging
         card.draggable = true;
         card.addEventListener('dragstart', handleDragStart);
+        card.addEventListener('dragend', handleDragEnd);
     }
- 
+
     return card;
- }
- 
- function addDropEventsToBoardCards(increment) {
+}
+
+
+
+
+
+
+function addDropEventsToBoardCards(increment) {
     Array.from(gameBoard.children).forEach(card => {
-        card.addEventListener('drop', event => handleCardDrop(event, increment));
+        card.addEventListener('drop', (event) => handleCardDrop(event, increment));
         card.addEventListener('dragover', handleDragOver);
     });
- }
- 
- function handleCardDrop(event, increment) {
-    event.preventDefault();
-    event.stopPropagation();
- 
-    const droppedValue = parseInt(event.dataTransfer.getData('text'), 10);
-    const targetValue = parseInt(event.target.textContent, 10);
- 
-    if (droppedValue === targetValue + increment) {
-        const scoreToAdd = 10;
- 
-        updateScore(score + scoreToAdd);
- 
-        if (score % 40 === 0) {
-            setupGameBoard(increment);
-            if (event.target.parentNode === gameBoard) {
-                player1Score += scoreToAdd;
-            } else if (event.target.parentNode === playersHand) {
-                player2Score += scoreToAdd;
-            }
-            updatePlayerScores();
-        }
- 
-        event.target.textContent = droppedValue;
-        event.target.classList.remove('incorrect');
-        event.target.classList.add('correct');
- 
-        const playedCard = document.querySelector('.card.dragging');
-        playedCard.classList.add('played');
- 
-        playedCard.addEventListener('animationend', () => {
-            playedCard.remove();
-        });
-    } else {
-        event.target.classList.add('incorrect');
-    }
- }
- 
- function handleDragStart(event) {
-    if (window.innerWidth > 768) {
-        event.target.classList.add('dragging');
-        event.dataTransfer.setData('text', event.target.textContent);
-    }
- }
- 
- function handleDragOver(event) {
-    event.preventDefault();
- }
- 
- function formatTime(seconds) {
-    const minutes = Math.floor(seconds / 60);
-    const remainingSeconds = seconds % 60;
-    return `${minutes.toString().padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`;
- }
- 
- function setupMobileEvents() {
-    const cards = document.querySelectorAll('#players-hand .card');
-    cards.forEach(card => {
-        card.addEventListener('click', function(event) {
-            handleCardSelection(event.target);
-        });
-    });
- 
-    const gameSlots = document.querySelectorAll('#game-board .slot');
-    gameSlots.forEach(slot => {
-        slot.addEventListener('click', function(event) {
-            if (selectedCard) {
-                handleCardPlacement(event.target);
-            }
-        });
-    });
- }
- 
- function handleCardSelection(card) {
-    if (selectedCard) {
+}
+
+
+
+function handleCardTap(event) {
+    const tappedCard = event.target;
+    const isPlayerCard = tappedCard.parentNode.id === 'players-hand';
+
+    // Deselect if the same card is tapped
+    if (selectedCard === tappedCard) {
         selectedCard.classList.remove('selected');
+        selectedCard = null;
+        return;
     }
- 
-    selectedCard = card;
-    selectedCard.classList.add('selected');
- }
- 
- function handleCardPlacement(target) {
-    const increment = getUserConfiguration();
-    const targetValue = parseInt(target.textContent, 10);
-    const cardValue = parseInt(selectedCard.textContent, 10);
- 
-    if (cardValue === targetValue + increment) {
-        updateScore(score + 10);
-        target.textContent = cardValue;
-        selectedCard.remove();
-        resetSelectedCard();
-    } else {
-        console.log('Incorrect placement');
+
+    // Select if it's a player's card
+    if (isPlayerCard) {
+        if (selectedCard) {
+            selectedCard.classList.remove('selected'); // Remove selection from previous card
+        }
+        tappedCard.classList.add('selected');
+        selectedCard = tappedCard;
+        return;
     }
- }
- 
- function resetSelectedCard() {
-    if (selectedCard) {
+
+    // Attempt to place the card if a board card is tapped
+    if (selectedCard && !isPlayerCard) {
+        let fakeEvent = {
+            target: tappedCard,
+            preventDefault: () => {},
+            stopPropagation: () => {},
+            dataTransfer: { getData: () => selectedCard.textContent }
+        };
+        handleCardDrop(fakeEvent, increment); // Make sure 'increment' is defined or accessible
+
+        // Reset selection after dropping
         selectedCard.classList.remove('selected');
         selectedCard = null;
     }
- }
- 
- function getUserConfiguration() {
-    return 2; // Default increment if none is set
- }
- 
- window.addEventListener('DOMContentLoaded', initializeGame);
+}
+
+
+function handleCardDrop(event, increment) {
+    event.preventDefault();
+    const draggedCardValue = parseInt(event.dataTransfer.getData('text'), 10);
+    const boardCardValueSpan = event.target.querySelector('.card-value');
+    const boardCardValue = parseInt(boardCardValueSpan.textContent, 10);
+
+    if (isNaN(draggedCardValue) || isNaN(boardCardValue)) {
+        console.error('One of the card values is not a number.');
+        return;
+    }
+
+    if (isLargeScreen()) {
+        const isCorrect = (draggedCardValue === boardCardValue + increment);
+        if (isCorrect) {
+            score += 10;
+            updateScore(score);
+            event.target.classList.add('correct');
+            event.target.classList.remove('incorrect');
+            boardCardValueSpan.style.visibility = 'hidden';
+            
+            let correctMessageSpan = event.target.querySelector('.correct-message');
+            if (!correctMessageSpan) {
+                correctMessageSpan = document.createElement('span');
+                correctMessageSpan.classList.add('correct-message');
+                correctMessageSpan.textContent = 'Correct';
+                event.target.appendChild(correctMessageSpan);
+            }
+
+            event.target.draggable = false;
+
+            // Check if all cards are correct after each drop
+            if (checkIfAllCardsCorrect()) {
+                // Transition to the next stage
+                moveToNextStage(increment);
+            }
+        } else {
+            event.target.classList.add('incorrect');
+            event.target.classList.remove('correct');
+            boardCardValueSpan.style.visibility = 'visible'; // Show the card value again for incorrect guesses
+        }
+    }
+}
+
+
+function moveToNextStage(increment) {
+    // Generate a random increment value between 1 and 10 for updating the board cards
+    const randomIncrement = Math.floor(Math.random() * 10) + 1;
+
+    const cards = gameBoard.querySelectorAll('.card');
+    const newBoardValues = [];
+
+    // Update each board card with a new value
+    cards.forEach(card => {
+        const valueSpan = card.querySelector('.card-value');
+        let currentValue = parseInt(valueSpan.textContent, 10);
+        let newValue = currentValue + randomIncrement;  // Apply the random increment
+
+        valueSpan.textContent = newValue;  // Update the displayed value
+        valueSpan.style.visibility = 'visible';  // Ensure the value is visible
+        card.classList.remove('correct', 'incorrect');  // Remove any status classes
+        card.draggable = true;  // Ensure the card is draggable
+
+        newBoardValues.push(newValue);  // Store the new value for updating player's hand
+
+        // Remove any existing 'correct-message' element
+        const correctMessageSpan = card.querySelector('.correct-message');
+        if (correctMessageSpan) {
+            card.removeChild(correctMessageSpan);
+        }
+    });
+
+    // After updating the board cards, reshuffle and reload the player's hand with new cards
+    reshufflePlayersHand(newBoardValues, increment);
+}
+
+function reshufflePlayersHand(boardValues, increment) {
+    playersHand.innerHTML = ''; // Clear the current player's hand
+
+    // Generate new matching player cards
+    boardValues.forEach(value => {
+        let correctValue = value + increment;  // Correct value to match board
+        let card = createCardElement(correctValue, true);  // Player card is draggable
+        playersHand.appendChild(card);
+    });
+
+    // Optionally add an incorrect card not matching any board value
+    let incorrectValue;
+    do {
+        incorrectValue = getRandomNumber(1, 100);  // Generate a distinct value
+    } while (boardValues.includes(incorrectValue - increment));
+    playersHand.appendChild(createCardElement(incorrectValue, true));  // Add the incorrect card
+
+    // Shuffle the player's hand to randomize card order
+    shufflePlayersHand();
+}
+
+function shufflePlayersHand() {
+    let handCards = Array.from(playersHand.children);
+    shuffleArray(handCards);
+    handCards.forEach(card => playersHand.appendChild(card));  // Re-append shuffled cards
+}
+
+
+
+function reshufflePlayersHand(boardValues, increment) {
+    playersHand.innerHTML = ''; // Clear current player's hand
+
+    // Generate and shuffle the new card values
+    const correctValues = shuffleArray([...boardValues]).slice(0, 4).map(value => value + increment);
+    let fakeValue;
+    do {
+        fakeValue = getRandomNumber(1, 100);  // Ensure it fits your game rules
+    } while (correctValues.includes(fakeValue));
+
+    const playerCardValues = [...correctValues, fakeValue];
+    shuffleArray(playerCardValues);  // Shuffle to mix correct and fake cards
+
+    // Add cards to the hand with animation
+    playerCardValues.forEach((value, index) => {
+        setTimeout(() => {
+            const card = createCardElement(value, true);
+            playersHand.appendChild(card);
+        }, index * 100); // Delay each card's appearance slightly for the dealing effect
+    });
+}
+
+
+function getRandomNumber(min, max) {
+    return Math.floor(Math.random() * (max - min + 1)) + min;
+}
+
+function shuffleArray(array) {
+    for (let i = array.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [array[i], array[j]] = [array[j], array[i]]; // ES6 destructuring swap
+    }
+    return array;
+}
+
+
+function setupTapEvents() {
+    playersHand.addEventListener('click', function(event) {
+        let targetCard = event.target.closest('.card');
+        if (targetCard && targetCard.parentNode === playersHand && selectedCard !== targetCard) {
+            handleCardSelection(targetCard);
+        }
+    });
+
+    gameBoard.addEventListener('click', function(event) {
+        let targetCard = event.target.closest('.card');
+        if (selectedCard && targetCard && targetCard.parentNode === gameBoard) {
+            validateCardSelection(targetCard, selectedCard);
+            selectedCard.classList.remove('selected');
+            selectedCard = null;  // Deselect after placing
+        }
+    });
+}
+
+
+function setupUI() {
+    // Additional setup for UI elements, like buttons, scores, etc.
+    document.getElementById('play-offline').addEventListener('click', startOfflineGame);
+    document.getElementById('play-online').addEventListener('click', startOnlineGame);
+}
+
+function handleCardSelection(card) {
+    if (selectedCard) {
+        selectedCard.classList.remove('selected');
+    }
+    selectedCard = card;
+    selectedCard.classList.add('selected');
+}
+
+function validateCardSelection(boardCard, playerCard) {
+    const boardValue = parseInt(boardCard.querySelector('.card-value').textContent.trim());
+    const playerValue = parseInt(playerCard.textContent.trim());
+
+    removeStatusMessage(boardCard); // Remove any existing status messages first
+
+    if (playerValue === boardValue + INCREMENT_VALUE) {
+        boardCard.classList.add('correct');
+        boardCard.classList.remove('incorrect');
+        addStatusMessage(boardCard, "Correct");
+        updateScore(score + 10);
+        // Trigger next stage if all are correct
+        if (checkIfAllCardsCorrect()) {
+            moveToNextStage(INCREMENT_VALUE);
+        }
+    } else {
+        boardCard.classList.add('incorrect');
+        boardCard.classList.remove('correct');
+        addStatusMessage(boardCard, "Incorrect");
+    }
+}
+
+function addStatusMessage(card, message) {
+    const messageSpan = document.createElement('span');
+    messageSpan.classList.add('status-message');
+    messageSpan.textContent = message;
+    card.appendChild(messageSpan);
+}
+
+function removeStatusMessage(card) {
+    const existingMessage = card.querySelector('.status-message');
+    if (existingMessage) {
+        card.removeChild(existingMessage);
+    }
+}
+
+function checkIfAllCardsCorrect() {
+    const cards = gameBoard.querySelectorAll('.card');
+    return Array.from(cards).every(card => card.classList.contains('correct'));
+}
+
+function setupDragAndDropEvents() {
+    // Existing drag and drop setup
+    // Add dragstart, dragend, dragover, and drop listeners to the appropriate elements
+    const playersHand = document.getElementById('players-hand');
+    const gameBoard = document.getElementById('game-board');
+
+    playersHand.querySelectorAll('.card').forEach(card => {
+        card.setAttribute('draggable', true);
+        card.addEventListener('dragstart', handleDragStart);
+        card.addEventListener('dragend', handleDragEnd);
+    });
+
+    gameBoard.querySelectorAll('.card').forEach(card => {
+        card.addEventListener('dragover', handleDragOver);
+        card.addEventListener('drop', handleDrop);
+    });
+}
+
+
+
+
+
+function handleDragStart(event) {
+    event.dataTransfer.setData('text', event.target.textContent);
+    selectedCard = event.target;
+}
+
+function handleDragEnd(event) {
+    selectedCard = null;
+}
+
+function handleDragOver(event) {
+    event.preventDefault();
+}
+
+function handleDrop(event) {
+    event.preventDefault();
+    let targetCard = event.target.closest('.card');
+    validateCardSelection(targetCard, selectedCard);
+}
+
+function updateScore(newScore) {
+    const scoreDisplay = document.getElementById('score');
+    score += newScore;
+    scoreDisplay.textContent = 'Score: ' + score;
+}
+
+
+
+function formatTime(seconds) {
+    let minutes = Math.floor(seconds / 60);
+    let remainingSeconds = seconds % 60;
+    return minutes.toString().padStart(2, '0') + ':' + remainingSeconds.toString().padStart(2, '0');
+}
+
+// Call the initialize function when the window is loaded
+window.addEventListener('load', initializeGame);
