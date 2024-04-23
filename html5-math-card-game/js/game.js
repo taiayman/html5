@@ -60,6 +60,26 @@ function initializeGame() {
     }
 
     setupUI();  // Additional UI setups
+
+    const music = document.getElementById('bg-music');
+    music.muted = true;
+    music.play().then(() => {
+        console.log("Autoplay started muted");
+    }).catch(error => {
+        console.log("Autoplay blocked");
+    });
+
+    // Unmute on first interaction
+    document.body.addEventListener('click', function unmuteMusic() {
+        if (music.muted) {
+            music.muted = false;
+            music.play();  // Ensure music plays when unmuted
+        }
+        // Remove this listener after it's used to prevent repeating
+        document.body.removeEventListener('click', unmuteMusic);
+    });
+
+    
 }
 
 function setupEventListeners() {
@@ -89,6 +109,12 @@ function startOfflineGame() {
     // Set game state as playing
     isPlaying = true;
     
+    // Try starting the music, if not already playing
+    if (!isMusicPlaying) {
+        toggleMusic();  // This will check the state and play the music if needed
+    }
+
+    
     // Reset and update scores
     score = 0;
     player1Score = 0;
@@ -117,6 +143,13 @@ function startOnlineGame() {
     alert('Online game mode is not yet implemented.');
     document.getElementById('player-info').classList.remove('hidden');
 
+    isPlaying = true;
+    
+    // Try starting the music, if not already playing
+    if (!isMusicPlaying) {
+        toggleMusic();  // This will check the state and play the music if needed
+    }
+
 }
 
 // Function to start the timer
@@ -135,48 +168,48 @@ function startTimer(duration) {
     }, 1000);
 }
 
-// Function to end the game
+
 function endGame() {
     isPlaying = false;
     clearInterval(gameTimer);
 
-    // Reset UI components
-    document.querySelectorAll('.popup').forEach(popup => popup.remove()); // Remove any existing popups
+    const modalOverlay = document.createElement('div');
+    modalOverlay.className = 'modal-overlay';
 
-    // Determine the winner
-    let winner = 'It\'s a tie!';
-    if (player1Score > player2Score) winner = 'Player 1 wins!';
-    else if (player2Score > player1Score) winner = 'Player 2 wins!';
-
-    // Create the popup element
     const popup = document.createElement('div');
-    popup.classList.add('popup');
+    popup.className = 'popup';
     popup.innerHTML = `
-        <div class="popup-content">
-            <h2>Time's up!</h2>
-            <p>Your final score is: ${score}</p>
-            <p>${winner}</p>
-            <button id="play-again-btn">Play Again</button>
-            <button id="back-to-home-btn">Back to Home</button>
+        <h2>Time's up!</h2>
+        <p>Your final score is: ${score}</p>
+        <div>
+            <button id="play-again-btn">
+                <span class="icon-container"><i class="fas fa-redo"></i></span>Play Again
+            </button>
+            <button id="back-to-home-btn">
+                <span class="icon-container"><i class="fas fa-home"></i></span>Back to Home
+            </button>
         </div>
     `;
+    modalOverlay.appendChild(popup);
+    document.body.appendChild(modalOverlay);
 
-    document.body.appendChild(popup);
-
-    // Add event listeners to the buttons
+    // Add functionality to buttons
     document.getElementById('play-again-btn').addEventListener('click', function() {
         resetGameState();
-        popup.remove();
+        document.body.removeChild(modalOverlay);
         startOfflineGame();
     });
 
     document.getElementById('back-to-home-btn').addEventListener('click', function() {
         resetGameState();
-        popup.remove();
+        document.body.removeChild(modalOverlay);
         startPage.classList.remove('hidden');
         gamePage.classList.add('hidden');
     });
 }
+
+
+
 
 function resetGameState() {
     timerDisplay.textContent = '01:00';
@@ -274,7 +307,18 @@ function updateScore(increment = 10) {
     console.log(`Adding ${increment} to score. Current score before increment: ${score}`);
     score += increment;
     scoreDisplay.textContent = `Score: ${score}`;
+
+    // Check if the score is a multiple of 40 and play the sound
+    if (score % 40 === 0) {
+        playCorrectSound();  // Function to play the sound
+    }
 }
+
+function playCorrectSound() {
+    const correctSound = document.getElementById('correct-sound'); // Make sure this ID matches your <audio> element
+    correctSound.play();
+}
+
 
 // Update the player scores display
 function updatePlayerScores() {
@@ -282,18 +326,37 @@ function updatePlayerScores() {
     player2ScoreDisplay.textContent = player2Score;
 }
 
-// Toggle the music
+
+
 function toggleMusic() {
-    if (isMusicPlaying) {
-        // Stop the music
-        isMusicPlaying = false;
-        toggleMusicButton.textContent = '🔇';
-    } else {
-        // Play the music
+    const music = document.getElementById('bg-music');
+    const musicIcon = document.getElementById('music-icon');
+    if (music.paused) {
+        music.play();
         isMusicPlaying = true;
-        toggleMusicButton.textContent = '🔊';
+        musicIcon.src = 'assets/images/volume_on.png';
+    } else {
+        music.pause();
+        isMusicPlaying = false;
+        musicIcon.src = 'assets/images/volume_off.png';
     }
 }
+// Add the event listener to the toggle button
+document.getElementById('toggle-music').addEventListener('click', toggleMusic);
+
+function setupDragEvents() {
+    const cards = document.querySelectorAll('.card');
+    cards.forEach(card => {
+        card.addEventListener('dragstart', playDragSound);
+    });
+}
+
+function playDragSound() {
+    const dragSound = document.getElementById('drag-sound');
+    console.log("Playing drag sound"); // Confirm this is logged
+    dragSound.play();
+}
+
 
 // Utility functions
 function getRandomNumber(min, max) {
@@ -307,18 +370,42 @@ function shuffleArray(array) {
     }
 }
 
+
+
 function createCardElement(value, isPlayerCard) {
     let card = document.createElement('div');
     card.classList.add('card');
     
-    // Create a span for the card value
+    // Create an img element for the card image
+    let img = document.createElement('img');
+    
+    // Check if the value is greater than 50, then choose a random image
+    if (value > 50) {
+        // Array of random images, ensure these are available in your assets/images directory
+        const randomImages = [
+            '1.png',
+            '5.png',
+            '10.png',
+            '15.png',
+            '20.png'
+        ];
+        const randomIndex = Math.floor(Math.random() * randomImages.length);
+        img.src = `assets/images/${randomImages[randomIndex]}`; // Select random image from the array
+    } else {
+        img.src = `assets/images/${value}.png`; // Use the value-based image
+    }
+    
+    img.draggable = false; // Prevent the image from being draggable
+    card.appendChild(img); // Add the image to the card
+
+    // Create a span for the card value (if you still want it visible)
     let valueSpan = document.createElement('span');
     valueSpan.classList.add('card-value');
     valueSpan.textContent = value;
     card.appendChild(valueSpan); // Add the value span to the card
 
     if (isPlayerCard) {
-        // If this card is a player's card, make it draggable and add event listeners for dragging
+        // Make the player's card draggable
         card.draggable = true;
         card.addEventListener('dragstart', handleDragStart);
         card.addEventListener('dragend', handleDragEnd);
@@ -326,7 +413,6 @@ function createCardElement(value, isPlayerCard) {
 
     return card;
 }
-
 
 
 
@@ -365,7 +451,6 @@ function handleCardTap(event) {
             if (!correctMessageSpan) {
                 correctMessageSpan = document.createElement('span');
                 correctMessageSpan.classList.add('correct-message');
-                correctMessageSpan.textContent = 'Correct';
                 tappedCard.appendChild(correctMessageSpan);
             }
             
@@ -413,14 +498,15 @@ function handleCardDrop(event, increment) {
             updateScore(10); // Add 10 to the score
             event.target.classList.add('correct');
             event.target.classList.remove('incorrect');
-            boardCardValueSpan.style.visibility = 'hidden'; // Hide the card number
+
+            // Retain visibility of the card number instead of hiding it
+            // boardCardValueSpan.style.visibility = 'hidden'; // Remove or comment out this line
 
             let correctMessageSpan = event.target.querySelector('.correct-message');
             if (!correctMessageSpan) {
                 // If the "Correct" message doesn't already exist, create and append it
                 correctMessageSpan = document.createElement('span');
                 correctMessageSpan.classList.add('correct-message');
-                correctMessageSpan.textContent = 'Correct';
                 event.target.appendChild(correctMessageSpan);
             }
 
@@ -437,6 +523,7 @@ function handleCardDrop(event, increment) {
         }
     }
 }
+
 
 
 function moveToNextStage(increment) {
@@ -534,12 +621,12 @@ function shuffleArray(array) {
     return array;
 }
 
-
 function setupTapEvents() {
     playersHand.addEventListener('click', function(event) {
         let targetCard = event.target.closest('.card');
         if (targetCard && targetCard.parentNode === playersHand && selectedCard !== targetCard) {
             handleCardSelection(targetCard);
+            playDragSound();  // Play sound on selecting a card from the hand
         }
     });
 
@@ -547,10 +634,16 @@ function setupTapEvents() {
         let targetCard = event.target.closest('.card');
         if (selectedCard && targetCard && targetCard.parentNode === gameBoard) {
             validateCardSelection(targetCard, selectedCard);
+            playDragSound();  // Play sound on validating card placement
             selectedCard.classList.remove('selected');
             selectedCard = null;  // Deselect after placing
         }
     });
+}
+
+function playDragSound() {
+    const dragSound = document.getElementById('drag-sound');
+    dragSound.play();
 }
 
 
@@ -576,11 +669,11 @@ function validateCardSelection(boardCard, playerCard) {
     if (playerValue === boardValue + INCREMENT_VALUE) {
         boardCard.classList.add('correct');
         boardCard.classList.remove('incorrect');
-        boardCard.querySelector('.card-value').style.visibility = 'hidden'; // Hide the card value
+        
 
         const correctMessage = boardCard.querySelector('.correct-message') || document.createElement('span');
         correctMessage.classList.add('correct-message');
-        correctMessage.textContent = "Correct";        boardCard.appendChild(correctMessage);
+        boardCard.appendChild(correctMessage);
 
         updateScore(10); // Add 10 to the score
 
@@ -593,6 +686,7 @@ function validateCardSelection(boardCard, playerCard) {
         boardCard.querySelector('.card-value').style.visibility = 'visible'; // Show the card value if not correct
     }
 }
+
 
 
 function addStatusMessage(card, message) {
@@ -615,20 +709,24 @@ function checkIfAllCardsCorrect() {
 }
 
 function setupDragAndDropEvents() {
-    // Existing drag and drop setup
-    // Add dragstart, dragend, dragover, and drop listeners to the appropriate elements
     const playersHand = document.getElementById('players-hand');
     const gameBoard = document.getElementById('game-board');
 
+    // Ensure all cards in the player's hand and the game board are set up for dragging
     playersHand.querySelectorAll('.card').forEach(card => {
         card.setAttribute('draggable', true);
-        card.addEventListener('dragstart', handleDragStart);
+        card.addEventListener('dragstart', function(event) {
+            handleDragStart(event);
+            playDragSound(); // Ensures sound plays on drag start
+        });
         card.addEventListener('dragend', handleDragEnd);
     });
 
     gameBoard.querySelectorAll('.card').forEach(card => {
         card.addEventListener('dragover', handleDragOver);
-        card.addEventListener('drop', handleDrop);
+        card.addEventListener('drop', function(event) {
+            handleDrop(event);
+        });
     });
 }
 
@@ -637,13 +735,14 @@ function setupDragAndDropEvents() {
 
 
 function handleDragStart(event) {
-    event.dataTransfer.setData('text', event.target.textContent);
-    selectedCard = event.target;
+    event.dataTransfer.setData('text', event.target.textContent.trim());
+    selectedCard = event.target; // Storing the selected card for drop validation
 }
 
 function handleDragEnd(event) {
-    selectedCard = null;
+    selectedCard = null; // Clear the selected card once dragging ends
 }
+
 
 function handleDragOver(event) {
     event.preventDefault();
@@ -654,7 +753,6 @@ function handleDrop(event) {
     let targetCard = event.target.closest('.card');
     validateCardSelection(targetCard, selectedCard);
 }
-
 
 function updateScore(increment) {
     console.log(`Adding ${increment} to score. Current score before increment: ${score}`);
@@ -668,6 +766,9 @@ function formatTime(seconds) {
     let remainingSeconds = seconds % 60;
     return minutes.toString().padStart(2, '0') + ':' + remainingSeconds.toString().padStart(2, '0');
 }
+
+
+
 
 // Call the initialize function when the window is loaded
 window.addEventListener('load', initializeGame);
